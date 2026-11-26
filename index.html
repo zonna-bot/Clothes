@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI人物服裝風格提示詞產生器</title>
+<style>
+:root{--bg:#f6efe4;--card:#fffaf1;--line:#d9c7ad;--ink:#3b2b1e;--sub:#6b5440;--accent:#8a5a36;--accent2:#6f4524;--sel:#8a5a36;--ok:#2f6b3a}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font-family:"Noto Serif TC","Noto Sans TC","PingFang TC","Microsoft JhengHei",serif;font-size:18px;line-height:1.7;font-weight:500}
+button{font-family:inherit;font-size:18px;font-weight:600;color:var(--ink);cursor:pointer}
+button:focus-visible{outline:4px solid #2b6cb0;outline-offset:2px}
+header{text-align:center;padding:22px 16px 8px}
+h1{font-size:34px;margin:0 0 4px;line-height:1.3}
+.subt{font-size:22px;font-weight:700;color:var(--accent2);margin:0}
+.desc{margin:4px 0 0;color:var(--sub)}
+main{max-width:1380px;margin:0 auto;padding:12px 16px 40px;display:grid;grid-template-columns:minmax(0,1fr) 440px;gap:20px;align-items:start}
+.panel{background:var(--card);border:2px solid var(--line);border-radius:18px;padding:18px}
+h2{font-size:28px;margin:0 0 10px;line-height:1.3}
+h3{font-size:20px;margin:14px 0 6px}
+.quick{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:6px}
+.quick button{min-height:54px;padding:8px 14px;border:2px solid var(--line);background:#f3e6d2;border-radius:14px}
+.quick button:hover{background:#ead8bd}
+.quick .rand{background:var(--accent);color:#fff;border-color:var(--accent2)}
+.tabs{display:grid;grid-template-columns:repeat(7,1fr);gap:8px;margin:12px 0}
+.tab{min-height:70px;padding:6px 4px;border:2px solid var(--line);background:#f8f0e2;border-radius:12px;line-height:1.3}
+.tab small{display:block;font-size:16px;color:var(--sub);font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tab.on{background:#fff;border-color:var(--accent);border-width:3px}
+.tab.done small{color:var(--ok);font-weight:700}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.opt{min-height:58px;padding:8px 6px;border:2px solid var(--line);background:#fff;border-radius:14px;display:flex;align-items:center;justify-content:center;gap:8px;text-align:center;line-height:1.3}
+.opt:hover{background:#f5ead9}
+.opt.on{background:var(--sel);color:#fff;border-color:var(--accent2);box-shadow:inset 0 0 0 2px #fff}
+.opt.on::before{content:"✓ "}
+.opt.none{border-style:dashed;background:#f1e8d8}
+.sw{width:28px;height:28px;border-radius:50%;border:2px solid #7a6650;flex:none}
+.nav{display:flex;justify-content:space-between;gap:10px;margin-top:14px}
+.nav button{min-height:56px;padding:8px 22px;border:2px solid var(--accent);background:#fff;border-radius:14px}
+.hint{color:var(--sub);margin:0 0 10px}
+.side{position:sticky;top:12px}
+.chips{display:flex;flex-wrap:wrap;gap:6px;min-height:40px;margin-bottom:10px}
+.chip{background:#efe0c8;border-radius:20px;padding:2px 12px;font-size:18px}
+.big{width:100%;min-height:64px;border:0;border-radius:16px;background:var(--accent);color:#fff;font-size:22px;margin:4px 0 10px}
+.big:hover{background:var(--accent2)}
+.big.alt{background:#fff;color:var(--accent2);border:3px solid var(--accent)}
+.result{background:#fffdf7;border:2px solid var(--line);border-radius:14px;padding:12px 14px;min-height:90px;font-size:19px;line-height:1.8;white-space:pre-wrap}
+.result.empty{color:#7d6a56}
+.msg{min-height:34px;color:var(--ok);font-weight:700;font-size:19px;margin:6px 0}
+@media(max-width:1000px){main{grid-template-columns:1fr}.side{position:static}.tabs{grid-template-columns:repeat(4,1fr)}h1{font-size:28px}}
+@media(max-width:520px){.tabs{grid-template-columns:repeat(2,1fr)}.grid{grid-template-columns:repeat(2,1fr)}}
+</style>
+</head>
+<body>
+<header>
+<h1>AI人物服裝風格提示詞產生器</h1>
+<p class="subt">選一選，就能組出漂亮的服裝提示詞</p>
+<p class="desc">不用自己想提示詞，選擇喜歡的衣服，最後直接複製即可。</p>
+</header>
+<main>
+<section class="panel" aria-label="服裝選擇">
+<h2>服裝選擇</h2>
+<h3>🌟 快速搭配（一鍵套用）</h3>
+<div class="quick" id="quick"></div>
+<h3>請依序選擇（沒有需要可選「不指定」）</h3>
+<div class="tabs" id="tabs"></div>
+<p class="hint" id="hint"></p>
+<div class="grid" id="grid"></div>
+<div class="nav"><button id="prev">‹ 上一項</button><button id="next">下一項 ›</button></div>
+</section>
+<section class="panel side" aria-label="我的服裝提示詞">
+<h2>我的服裝提示詞</h2>
+<div class="chips" id="chips"></div>
+<button class="big" id="gen">✨ 產生我的服裝提示詞</button>
+<h3>完整版</h3>
+<div class="result empty" id="full">請先在左邊選擇，再按上面的按鈕。</div>
+<button class="big alt" id="cfull">📋 複製完整提示詞</button>
+<h3>簡短版</h3>
+<div class="result empty" id="short">這裡會顯示一句話版本。</div>
+<button class="big alt" id="cshort">📋 複製簡短版</button>
+<div class="msg" id="msg" role="status" aria-live="polite"></div>
+<button class="big alt" id="reset">🔄 重新選擇</button>
+</section>
+</main>
+<script>
+const CATS=[
+{k:'style',n:'服裝風格',m:0,i:'日系休閒,日系文青,韓系簡約,法式優雅,法式慵懶,森系自然,復古文藝,民國復古,中國風,新中式,波西米亞,美式休閒,街頭潮流,運動休閒,學院風,輕奢優雅,高級訂製,復古宮廷,未來科技,可愛Q版'},
+{k:'top',n:'上衣',m:0,i:'白色襯衫,棉麻襯衫,寬鬆襯衫,雪紡上衣,圓領T恤,條紋T恤,高領毛衣,針織衫,寬鬆針織衫,針織背心,毛衣,蕾絲上衣,荷葉邊上衣,泡泡袖上衣,Polo衫,牛仔襯衫,丹寧上衣,一字領上衣,中式立領上衣,盤扣上衣,短版上衣,寬版帽T,大學T,西裝背心,無袖背心'},
+{k:'bottom',n:'下身',m:0,i:'長裙,A字裙,百褶裙,傘裙,碎花長裙,牛仔裙,蕾絲裙,緞面長裙,中式長裙,旗袍裙,直筒褲,寬褲,闊腿褲,牛仔褲,白色長褲,卡其褲,工裝褲,西裝褲,燈芯絨長褲,九分褲,短褲,吊帶褲,背帶裙,細褶長裙,蓬裙'},
+{k:'outer',n:'外套',m:0,i:'米白風衣,長版風衣,短版外套,牛仔外套,針織外套,開襟毛衣,西裝外套,寬版西裝外套,小香風外套,毛呢大衣,長版大衣,羽絨外套,棒球外套,MA-1外套,工裝外套,皮衣,麂皮外套,斗篷,披肩,中式短外套,新中式外套,復古短外套,蕾絲罩衫,防曬薄外套,超大尺碼帽T外套'},
+{k:'shoes',n:'鞋子',m:0,i:'白色球鞋,帆布鞋,小白鞋,樂福鞋,瑪莉珍鞋,芭蕾平底鞋,平底鞋,牛津鞋,短靴,綁帶短靴,長靴,雨靴,涼鞋,羅馬涼鞋,運動鞋,復古球鞋,高跟鞋,低跟鞋,木屐,中式布鞋'},
+{k:'acc',n:'配件',m:1,i:'圓框眼鏡,黑框眼鏡,太陽眼鏡,絲巾,圍巾,貝雷帽,寬邊帽,草帽,棒球帽,毛帽,手提包,斜背包,小肩包,帆布包,編織包,復古皮包,腰包,珍珠耳環,小耳環,長耳環,項鍊,手錶,手鍊,戒指,胸針'},
+{k:'color',n:'顏色',m:0,i:'米白,奶茶,卡其,棕色,深藍,淺藍,灰色,黑色,白色,酒紅,墨綠,淡粉,淡紫,莫蘭迪色,大地色,黑白配,藍白配'}
+].map(c=>({...c,i:c.i.split(',')}));
+const HEX={米白:'#f3ead8',奶茶:'#c9a883',卡其:'#b8a36e',棕色:'#7b5535',深藍:'#1f3a5f',淺藍:'#9dc3e0',灰色:'#9a9a9a',黑色:'#222',白色:'#fff',酒紅:'#7a1f33',墨綠:'#2c5440',淡粉:'#f0c8cf',淡紫:'#cdb7e0',莫蘭迪色:'linear-gradient(90deg,#b7a39a 33%,#9fae9f 33% 66%,#c9b6b0 66%)',大地色:'linear-gradient(90deg,#8b6b4a 33%,#b39b6b 33% 66%,#6e7a55 66%)',黑白配:'linear-gradient(90deg,#222 50%,#fff 50%)',藍白配:'linear-gradient(90deg,#27487a 50%,#fff 50%)'};
+const GROUPS={
+soft:{s:'日系休閒,日系文青,韓系簡約,森系自然,法式慵懶',mood:'自然、溫柔、舒適的生活感',t:'白色襯衫,棉麻襯衫,寬鬆襯衫,圓領T恤,針織衫,寬鬆針織衫,條紋T恤',b:'長裙,A字裙,直筒褲,寬褲,九分褲,卡其褲,碎花長裙',o:'針織外套,開襟毛衣,米白風衣,牛仔外套,防曬薄外套',h:'樂福鞋,帆布鞋,小白鞋,平底鞋,白色球鞋',a:'圓框眼鏡,絲巾,貝雷帽,帆布包,小肩包,手提包,草帽,珍珠耳環',c:'米白,奶茶,卡其,大地色,莫蘭迪色,淺藍'},
+elegant:{s:'法式優雅,輕奢優雅,高級訂製,復古宮廷',mood:'優雅、細緻、有氣質的質感',t:'白色襯衫,雪紡上衣,蕾絲上衣,一字領上衣,高領毛衣,荷葉邊上衣',b:'緞面長裙,A字裙,長裙,西裝褲,細褶長裙,直筒褲',o:'小香風外套,西裝外套,毛呢大衣,長版大衣,披肩,米白風衣',h:'高跟鞋,瑪莉珍鞋,低跟鞋,芭蕾平底鞋',a:'珍珠耳環,絲巾,項鍊,小肩包,手提包,胸針,手錶',c:'米白,黑色,酒紅,淡粉,黑白配,深藍'},
+retro:{s:'復古文藝,民國復古',mood:'懷舊、文藝、有故事感的氛圍',t:'蕾絲上衣,針織背心,荷葉邊上衣,白色襯衫,毛衣',b:'A字裙,百褶裙,長裙,旗袍裙,燈芯絨長褲',o:'復古短外套,披肩,毛呢大衣,針織外套',h:'瑪莉珍鞋,牛津鞋,短靴,樂福鞋',a:'貝雷帽,絲巾,復古皮包,胸針,珍珠耳環,圓框眼鏡',c:'酒紅,墨綠,棕色,卡其,奶茶'},
+chinese:{s:'中國風,新中式',mood:'典雅、含蓄、有東方韻味的氣質',t:'中式立領上衣,盤扣上衣',b:'中式長裙,旗袍裙,闊腿褲,直筒褲',o:'中式短外套,新中式外套,披肩,斗篷',h:'中式布鞋,平底鞋',a:'珍珠耳環,手鍊,胸針,絲巾,長耳環',c:'墨綠,酒紅,米白,深藍,淡紫'},
+boho:{s:'波西米亞',mood:'自由、浪漫、輕鬆的度假氛圍',t:'棉麻襯衫,荷葉邊上衣,蕾絲上衣,一字領上衣',b:'碎花長裙,細褶長裙,長裙,傘裙',o:'披肩,開襟毛衣,麂皮外套,蕾絲罩衫',h:'涼鞋,羅馬涼鞋,短靴,長靴',a:'寬邊帽,草帽,編織包,項鍊,手鍊,長耳環',c:'大地色,棕色,卡其,酒紅,墨綠'},
+sport:{s:'美式休閒,街頭潮流,運動休閒',mood:'活力、俐落、自在的街頭感',t:'圓領T恤,寬版帽T,大學T,Polo衫,條紋T恤,無袖背心',b:'牛仔褲,工裝褲,寬褲,短褲,直筒褲,卡其褲',o:'棒球外套,MA-1外套,牛仔外套,工裝外套,超大尺碼帽T外套,羽絨外套',h:'運動鞋,復古球鞋,白色球鞋,帆布鞋',a:'棒球帽,腰包,斜背包,太陽眼鏡,帆布包,手錶',c:'灰色,黑色,白色,藍白配,深藍,黑白配'},
+school:{s:'學院風',mood:'青春、清爽、知性的校園感',t:'白色襯衫,針織背心,Polo衫,毛衣,西裝背心',b:'百褶裙,卡其褲,A字裙,西裝褲',o:'開襟毛衣,西裝外套,針織外套',h:'樂福鞋,瑪莉珍鞋,牛津鞋,小白鞋',a:'貝雷帽,圓框眼鏡,斜背包,圍巾,手錶',c:'深藍,灰色,卡其,酒紅,墨綠'},
+tech:{s:'未來科技',mood:'冷靜、俐落、帶未來感的氛圍',t:'高領毛衣,短版上衣,無袖背心,圓領T恤',b:'工裝褲,直筒褲,闊腿褲,短褲',o:'MA-1外套,工裝外套,皮衣,斗篷',h:'運動鞋,短靴,綁帶短靴,長靴',a:'太陽眼鏡,腰包,手錶,戒指',c:'黑色,灰色,白色,淺藍,黑白配'},
+cute:{s:'可愛Q版',mood:'可愛、甜美、俏皮的感覺',t:'泡泡袖上衣,荷葉邊上衣,寬版帽T,針織衫,圓領T恤',b:'背帶裙,蓬裙,傘裙,百褶裙,吊帶褲',o:'短版外套,針織外套,斗篷,牛仔外套',h:'瑪莉珍鞋,小白鞋,帆布鞋,雨靴',a:'貝雷帽,小肩包,毛帽,手鍊,胸針',c:'淡粉,淡紫,淺藍,米白,奶茶'}
+};
+Object.values(GROUPS).forEach(g=>{for(const k in g)if(k!=='mood')g[k]=g[k].split(',')});
+const groupOf=s=>Object.values(GROUPS).find(g=>g.s.includes(s));
+const PRESETS=[
+['🌸','日系文青','棉麻襯衫','A字裙','針織外套','樂福鞋',['圓框眼鏡','手提包'],'大地色'],
+['🎀','法式優雅','雪紡上衣','緞面長裙','小香風外套','瑪莉珍鞋',['珍珠耳環','絲巾'],'米白'],
+['🍃','森系自然','棉麻襯衫','碎花長裙','開襟毛衣','帆布鞋',['草帽','編織包'],'大地色'],
+['🏫','學院風','白色襯衫','百褶裙','開襟毛衣','樂福鞋',['貝雷帽','圓框眼鏡'],'深藍'],
+['👗','輕奢優雅','一字領上衣','緞面長裙','西裝外套','高跟鞋',['項鍊','小肩包'],'黑白配'],
+['🌿','新中式','中式立領上衣','中式長裙','新中式外套','中式布鞋',['手鍊','胸針'],'墨綠'],
+['👟','美式休閒','大學T','牛仔褲','棒球外套','復古球鞋',['棒球帽','帆布包'],'藍白配'],
+['🧸','可愛Q版','泡泡袖上衣','背帶裙','短版外套','瑪莉珍鞋',['貝雷帽','小肩包'],'淡粉']];
+let sel,cur=0,res={full:'',short:''};
+const $=id=>document.getElementById(id);
+const blank=()=>({style:null,top:null,bottom:null,outer:null,shoes:null,acc:[],color:null});
+sel=blank();
+const pick=a=>a[Math.floor(Math.random()*a.length)];
+function shuffle(a){return a.map(x=>[Math.random(),x]).sort((p,q)=>p[0]-q[0]).map(x=>x[1])}
+
+function renderQuick(){
+ $('quick').innerHTML='<button class="rand" id="rnd">🎲 幫我搭配一套</button>'+PRESETS.map((p,i)=>`<button data-p="${i}">${p[0]} ${p[1]}</button>`).join('');
+ $('rnd').onclick=randomOutfit;
+ $('quick').querySelectorAll('[data-p]').forEach(b=>b.onclick=()=>{const p=PRESETS[b.dataset.p];sel={style:p[1],top:p[2],bottom:p[3],outer:p[4],shoes:p[5],acc:[...p[6]],color:p[7]};refresh(true)});
+}
+function randomOutfit(){
+ const s=pick(CATS[0].i),g=groupOf(s)||GROUPS.soft;
+ sel={style:s,top:pick(g.t),bottom:pick(g.b),outer:Math.random()<.85?pick(g.o):null,shoes:pick(g.h),acc:shuffle(g.a).slice(0,2),color:pick(g.c)};
+ refresh(true);
+}
+function val(c){const v=sel[c.k];return c.m?(v.length?v.join('、'):''):(v||'')}
+function renderTabs(){
+ $('tabs').innerHTML=CATS.map((c,i)=>{const v=val(c);return `<button class="tab${i===cur?' on':''}${v?' done':''}" data-i="${i}">${c.n}<small>${v||'未選'}</small></button>`}).join('');
+ $('tabs').querySelectorAll('.tab').forEach(b=>b.onclick=()=>{cur=+b.dataset.i;renderGrid();renderTabs()});
+}
+function renderGrid(){
+ const c=CATS[cur];
+ $('hint').textContent=c.m?'可以選好幾樣，再點一次就取消。':'選一個，再點一次可取消。';
+ const none=`<button class="opt none${(c.m?!sel[c.k].length:!sel[c.k])?' on':''}" data-v="">不指定</button>`;
+ $('grid').innerHTML=none+c.i.map(x=>{
+  const on=c.m?sel[c.k].includes(x):sel[c.k]===x;
+  const sw=c.k==='color'?`<span class="sw" style="background:${HEX[x]}"></span>`:'';
+  return `<button class="opt${on?' on':''}" data-v="${x}">${sw}${x}</button>`}).join('');
+ $('grid').querySelectorAll('.opt').forEach(b=>b.onclick=()=>choose(b.dataset.v));
+ $('prev').style.visibility=cur?'visible':'hidden';
+ $('next').style.visibility=cur<CATS.length-1?'visible':'hidden';
+}
+function choose(v){
+ const c=CATS[cur];
+ if(!v){sel[c.k]=c.m?[]:null}
+ else if(c.m){const a=sel[c.k],i=a.indexOf(v);i>=0?a.splice(i,1):a.push(v)}
+ else sel[c.k]=sel[c.k]===v?null:v;
+ renderGrid();renderTabs();renderChips();
+}
+function renderChips(){
+ const t=CATS.map(c=>val(c)?`<span class="chip">${val(c)}</span>`:'').join('');
+ $('chips').innerHTML=t||'<span class="chip" style="background:none;color:#7d6a56">尚未選擇</span>';
+}
+function joinList(a){return a.length<3?a.join('與'):a.slice(0,-1).join('、')+'與'+a[a.length-1]}
+function colorFull(c){
+ if(!c)return'';
+ if(c.includes('配'))return`整體以${c.replace('配','')}配色呈現`;
+ if(c==='莫蘭迪色'||c==='大地色')return`整體以柔和的${c.replace(/色$/,'')}色系呈現`;
+ return`整體以${c}為主色調`;
+}
+function colorShort(c){
+ if(!c)return'';
+ if(c.includes('配'))return c.replace('配','')+'配色';
+ if(c==='莫蘭迪色'||c==='大地色')return c.replace(/色$/,'')+'色系';
+ return c.replace(/色$/,'')+'色調';
+}
+function build(){
+ const s=sel,p=[];
+ p.push(s.style?`人物穿著${s.style}風格服裝`:'人物穿著一套服裝');
+ if(s.top)p.push(`上身穿著${s.top}`);
+ if(s.bottom)p.push(`${s.top?'搭配':'下身穿著'}${s.bottom}`);
+ if(s.outer)p.push(`外搭${s.outer}`);
+ if(s.shoes)p.push(`腳穿${s.shoes}`);
+ if(s.acc.length)p.push(`搭配${joinList(s.acc)}`);
+ if(s.color)p.push(colorFull(s.color));
+ const g=s.style&&groupOf(s.style);
+ if(g)p.push(`營造${g.mood}`);
+ const full=p.join('，')+'。';
+ const items=[s.top,s.bottom,s.outer,s.shoes].filter(Boolean);
+ const q=[];
+ q.push((s.style?s.style+'穿搭':'服裝穿搭')+(items.length?'，'+items.join('＋'):''));
+ if(s.acc.length)q.push('搭配'+s.acc.join('、'));
+ if(s.color)q.push(colorShort(s.color));
+ return{full,short:q.join('，')+'。'};
+}
+function generate(){
+ const any=CATS.some(c=>val(c));
+ if(!any){$('msg').style.color='#9a3b1f';$('msg').textContent='請先在左邊選一些衣服，再按產生。';return}
+ res=build();
+ $('full').textContent=res.full;$('full').classList.remove('empty');
+ $('short').textContent=res.short;$('short').classList.remove('empty');
+ $('msg').textContent='';
+}
+function refresh(gen){renderTabs();renderGrid();renderChips();if(gen)generate()}
+function copy(t,btn){
+ if(!t){$('msg').style.color='#9a3b1f';$('msg').textContent='請先按「產生我的服裝提示詞」。';return}
+ const done=()=>{$('msg').style.color='';$('msg').textContent='✓ 已複製，可以貼到 Gemini 或 ChatGPT'};
+ const fb=()=>{const a=document.createElement('textarea');a.value=t;document.body.appendChild(a);a.select();try{document.execCommand('copy');done()}catch(e){$('msg').textContent='複製失敗，請用滑鼠選取文字後按 Ctrl+C'}a.remove()};
+ if(navigator.clipboard&&window.isSecureContext)navigator.clipboard.writeText(t).then(done,fb);else fb();
+}
+$('gen').onclick=generate;
+$('cfull').onclick=()=>copy(res.full);
+$('cshort').onclick=()=>copy(res.short);
+$('prev').onclick=()=>{if(cur>0){cur--;refresh()}};
+$('next').onclick=()=>{if(cur<CATS.length-1){cur++;refresh()}};
+$('reset').onclick=()=>{sel=blank();cur=0;res={full:'',short:''};
+ $('full').textContent='請先在左邊選擇，再按上面的按鈕。';$('full').classList.add('empty');
+ $('short').textContent='這裡會顯示一句話版本。';$('short').classList.add('empty');
+ $('msg').textContent='';refresh()};
+renderQuick();refresh();
+</script>
+</body>
+</html>
